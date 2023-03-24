@@ -1,0 +1,62 @@
+version: '3'
+
+env:
+  # Will use the default value beta if the environment variable doesn't exist
+  TAG_VERSION:
+    sh: echo "${TAG_VERSION:-beta}"
+  PATH_BUILD: build/
+  FILE_COMMAND: terragrunt-atlantis-config
+  FILE_ARCH: darwin_amd64
+  S3_BUCKET_NAME: cloudfront-origin-homebrew-tap-transcend-io
+  PROFILE: transcend-prod
+
+  # Determine the arch/os combos we're building for
+  XC_ARCH: amd64 arm
+  XC_OS: linux darwin windows
+
+tasks:
+  clean:
+    desc: Clean the build directory and the binary
+    cmds:
+      - rm -rf ./build
+      - rm -rf "${HOME}/bin/${FILE_COMMAND}"
+      - rm -rf cmd/test_artifacts
+
+  build:
+    deps: [clean]
+    desc: Build the binary for the current OS and architecture
+    cmds:
+      - CGO_ENABLED=0 goxc -bc="darwin,amd64" -pv="${TAG_VERSION}" -d="${PATH_BUILD}" -build-ldflags "-X main.VERSION=${TAG_VERSION}"
+
+  build-all:
+    deps: [clean]
+    desc: Build the binary for all OS and architecture combos
+    cmds:
+      - CGO_ENABLED=0 goxc -os="${XC_OS}" -arch="${XC_ARCH}" -pv="${TAG_VERSION}" -d="${PATH_BUILD}" -build-ldflags "-X main.VERSION=${TAG_VERSION}"
+
+  test:
+    desc: Run tests and show colors
+    cmds:
+      - go install gotest.tools/gotestsum@latest
+      - mkdir -p cmd/test_artifacts
+      #- go test -v ./...
+      - gotestsum --format testname ./...
+      - rm -rf cmd/test_artifacts
+
+  version:
+    desc: Print the current version
+    cmds:
+      - echo "${TAG_VERSION}"
+
+  sign:
+    deps: [build-all]
+    desc: Generate SHA256 checksums for the built binaries
+    cmds:
+      - rm -f "${PATH_BUILD}${TAG_VERSION}/SHA256SUMS"
+      - cd "${PATH_BUILD}${TAG_VERSION}" && shasum -a256 * > SHA256SUMS
+
+  install:
+    desc: Install the binary in ${HOME}/bin
+    cmds:
+      - install -d -m 755 "${HOME}/bin/"
+      - install "${PATH_BUILD}${FILE_COMMAND}/${TAG_VERSION}/${FILE_COMMAND}_${TAG_VERSION}_${FILE_ARCH}" "${HOME}/bin/${FILE_COMMAND}"
