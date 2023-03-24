@@ -27,13 +27,21 @@ jobs:
           restore-keys: |
             ubuntu-latest-1.18-go-
       - name: Get the tag version
-        id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+        id: get_versions
+        run: |
+          echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+          echo "TASK_VERSION=$(cat .tool-versions | grep 'task ' | cut -d ' ' -f2)" >> $GITHUB_ENV
+      - name: 'Install asdf dependencies'
+        uses: asdf-vm/actions/setup@v1
+      - name: 'Install Task'
+        uses: arduino/setup-task@v1
+        with:
+          version: ${{ env.TASK_VERSION }}
       # build binaries for all supported environments
       - name: Build and sign
         run: |
-          sudo apt update && sudo apt install -y make
-          make sign
+          set -e
+          task sign
         env:
           TAG_VERSION: ${{ env.VERSION }}
       # Create the release
@@ -43,4 +51,3 @@ jobs:
           prerelease: false
           files: |
             build/${{ env.VERSION }}/*
-
