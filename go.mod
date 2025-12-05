@@ -13,7 +13,7 @@ require (
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/mattn/go-zglob v0.0.2 // indirect
-	github.com/sirupsen/logrus v1.6.0
+	github.com/sirupsen/logrus v1.8.3
 	github.com/spf13/cobra v1.6.0
 	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli v1.22.4 // indirect
